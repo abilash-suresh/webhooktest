@@ -1,0 +1,50 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "jenkins-docker-demo"
+        CONTAINER_NAME = "demo-container"
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/<your-username>/jenkins-docker-demo.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t $IMAGE_NAME:latest .'
+            }
+        }
+
+        stage('Stop Old Container') {
+            steps {
+                script {
+                    sh '''
+                    if [ "$(docker ps -q -f name=$CONTAINER_NAME)" ]; then
+                        docker stop $CONTAINER_NAME
+                        docker rm $CONTAINER_NAME
+                    fi
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy New Container') {
+            steps {
+                sh 'docker run -d --name $CONTAINER_NAME -p 8081:80 $IMAGE_NAME:latest'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Deployment successful!"
+        }
+        failure {
+            echo "Deployment failed!"
+        }
+    }
+}
